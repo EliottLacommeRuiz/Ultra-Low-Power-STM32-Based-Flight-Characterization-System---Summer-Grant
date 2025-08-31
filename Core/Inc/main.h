@@ -63,6 +63,10 @@ void Error_Handler(void);
 #define FLASH_HOLD_RST_GPIO_Port GPIOA
 #define FLASH_WP_Pin GPIO_PIN_2
 #define FLASH_WP_GPIO_Port GPIOA
+#define IMU_NCS_Pin GPIO_PIN_0
+#define IMU_NCS_GPIO_Port GPIOB
+#define IMU_INT1_Pin GPIO_PIN_1
+#define IMU_INT1_GPIO_Port GPIOB
 #define LED_YELLOW_Pin GPIO_PIN_5
 #define LED_YELLOW_GPIO_Port GPIOB
 #define LED_GREEN_Pin GPIO_PIN_6

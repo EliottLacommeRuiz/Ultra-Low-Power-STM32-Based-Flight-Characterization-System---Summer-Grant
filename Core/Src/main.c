@@ -19,10 +19,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_device.h"
-#include "usbd_cdc_if.h" // Needed to transmit a string of char
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
 
 /* USER CODE END Includes */
 
@@ -112,23 +112,85 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  char txBuf[8];
-  uint8_t count = 1;
+//  char txBuf[8];
+//  uint8_t count = 1;
+
+  // Create rx array to store read information
+  uint8_t rx_buf[2];
+  bool dummy_read = false;
 
   while (1)
   {
-	  HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
-	  sprintf(txBuf, "%u\r\n", count);
+	  /* Instructions:
+	   * 	To put the IMU into SPI mode
+	   * 		Do a dummy read of register 0x00
+	   * 	Then verify that the chip is actually the IMU
+	   * 		Read register 0x00 (<== not sure if this is the real addr or a placeholder)
+	   * 		Check if it is equal to a specific value (need to figure out what this value is)
+	   * 			If good, then proper connection has been established
+	   * NOTE:
+	   * 	SPI has 1 dummy byte inserted before the payload (not sure what before the payload means but I assume it means that the data is
+	   * 	  second byte and not the first one
+	   *
+	   * 	*/
 
-	  if (count >= 100)
+
+	  // What is the IMU addr for the chip id?
+	  /*
+	   * The chip_id is on register 0x00
+	   * Only bits 0 to 7 contain valid information, the contents of bits 8 to 15 must be ignored
+	   */
+
+	  // How do I read a register?
+	  /*
+	   * In order to read a reg i need to set the CS so the IMU knows that is must start transmitting
+	   * 	This means the CS pin for the IMU must be pulled LOW (pull it HIGH to stop communication)
+	   * 	I will be using the IMU_NCS to set it
+	   * I can use HAL_SPI_Recieve to read the data
+	   * 	Will need to make an array (prob uint8_t) that can store 2 bytes
+	   * 		With the 2 bytes, the 2nd one will have the data? (<== need to check this again)
+	   */
+	  //HAL_SPI_Receive(&hspi1, pData, Size, Timeout);
+
+
+	  // What is the specific value I am comparing it to?
+	  /*
+	   * The chip ID value (reset value) in addr 0x00 is 0x0043
+	   */
+
+	  // Set NCS pin to LOW to start transmission
+	  HAL_GPIO_WritePin(IMU_NCS_GPIO_Port, IMU_NCS_Pin, GPIO_PIN_RESET);
+
+	  // Dummy read for the first time and skip storing to configure to SPI
+	  if (!dummy_read)
 	  {
-		  count = 1;
+		  HAL_SPI_Receive(&hspi1, rx_buf, 2, HAL_MAX_DELAY);
+		  dummy_read = true;
 	  }
-	  count++;
+	  else
+	  {
+//		  uint8_t tx_buf[2] = {(0x00 | 0x80), 0x00};
+//		  HAL_SPI_TransmitReceive(&hspi1, tx_buf, rx_buf, 2, HAL_MAX_DELAY);
+		  HAL_SPI_Receive(&hspi1, rx_buf, 2, HAL_MAX_DELAY);
+	  }
 
-	  CDC_Transmit_FS((uint8_t *) txBuf, strlen(txBuf));
+	  // Set NCS pin to HIGH to stop transmission
+	  HAL_GPIO_WritePin(IMU_NCS_GPIO_Port, IMU_NCS_Pin, GPIO_PIN_SET);
 
-	  HAL_Delay(500);
+
+
+//	  HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
+//	  sprintf(txBuf, "%u\r\n", count);
+//
+//	  if (count >= 100)
+//	  {
+//		  count = 1;
+//	  }
+//	  count++;
+//
+//	  CDC_Transmit_FS((uint8_t *) txBuf, strlen(txBuf));
+//
+//	  HAL_Delay(500);
 
 
     /* USER CODE END WHILE */
@@ -247,7 +309,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, FLASH_CS_Pin|FLASH_HOLD_RST_Pin|FLASH_WP_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LED_YELLOW_Pin|LED_GREEN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, IMU_NCS_Pin|LED_YELLOW_Pin|LED_GREEN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : FLASH_CS_Pin FLASH_HOLD_RST_Pin FLASH_WP_Pin */
   GPIO_InitStruct.Pin = FLASH_CS_Pin|FLASH_HOLD_RST_Pin|FLASH_WP_Pin;
@@ -256,12 +318,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LED_YELLOW_Pin LED_GREEN_Pin */
-  GPIO_InitStruct.Pin = LED_YELLOW_Pin|LED_GREEN_Pin;
+  /*Configure GPIO pins : IMU_NCS_Pin LED_YELLOW_Pin LED_GREEN_Pin */
+  GPIO_InitStruct.Pin = IMU_NCS_Pin|LED_YELLOW_Pin|LED_GREEN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : IMU_INT1_Pin */
+  GPIO_InitStruct.Pin = IMU_INT1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(IMU_INT1_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
