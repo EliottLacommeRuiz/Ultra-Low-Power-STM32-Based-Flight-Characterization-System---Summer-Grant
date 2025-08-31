@@ -23,7 +23,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,6 +44,7 @@
 SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
+bool imu_first_time = false;
 
 /* USER CODE END PV */
 
@@ -52,25 +52,62 @@ SPI_HandleTypeDef hspi1;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-//// Send printf to uart2
-//int _write(int fd, char* ptr, int len) {
-//  HAL_StatusTypeDef hstatus;
-//
-//  if (fd == 1 || fd == 2) {
-//    hstatus = HAL_UART_Transmit(&huart2, (uint8_t *) ptr, len, HAL_MAX_DELAY);
-//    if (hstatus == HAL_OK)
-//      return len;
-//    else
-//      return -1;
-//  }
-//  return -1;
-//}
+
+/* Imu_Start_Transmission
+ * Starts the transmission of the SPI line by setting NCS pin to LOW
+ *
+ * Takes: void
+ * Returns: void
+ */
+void Imu_Start_Transmission(void)
+{
+	HAL_GPIO_WritePin(IMU_NCS_GPIO_Port, IMU_NCS_Pin, GPIO_PIN_RESET);
+}
+
+/* Imu_Stop_Transmission
+ * Stops the transmission of the SPI line by setting NCS pin to HIGH
+ *
+ * Takes: void
+ * Returns: void
+ */
+void Imu_Stop_Transmission(void)
+{
+	HAL_GPIO_WritePin(IMU_NCS_GPIO_Port, IMU_NCS_Pin, GPIO_PIN_SET);
+}
+
+/* Imu_Reg16_Read
+ *
+ * Will read data from address given and output 1 byte of data through pointer
+ *
+ * Takes: uint8_t address and pointer data
+ * Returns: uint8_t status
+ */
+uint8_t Imu_Reg16_Read(uint8_t addr, uint8_t* data)
+{
+	/*
+	 * Create a transmit array that will set the transmit data to READ
+	 * Will have 4 bytes [(read set + addr), 0x00, 0x00, 0x00]
+	 */
+	uint8_t tx_buf[4] = { ( (addr & 0x7F) | 0x80), 0x00, 0x00, 0x00 };
+	uint8_t rx_buf[4] = {0};
+
+	Imu_Start_Transmission();
+
+	// Send and get data while seeing if out status is ok
+	uint8_t status = (HAL_SPI_TransmitReceive(&hspi1, tx_buf, rx_buf, 4, HAL_MAX_DELAY) == HAL_OK);
+
+	Imu_Stop_Transmission();
+
+	*data = rx_buf[2];
+	return status;
+}
 
 /* USER CODE END 0 */
 
@@ -116,67 +153,37 @@ int main(void)
 //  uint8_t count = 1;
 
   // Create rx array to store read information
-  uint8_t rx_buf[2];
-  bool dummy_read = false;
 
   while (1)
   {
-	  /* Instructions:
-	   * 	To put the IMU into SPI mode
-	   * 		Do a dummy read of register 0x00
-	   * 	Then verify that the chip is actually the IMU
-	   * 		Read register 0x00 (<== not sure if this is the real addr or a placeholder)
-	   * 		Check if it is equal to a specific value (need to figure out what this value is)
-	   * 			If good, then proper connection has been established
-	   * NOTE:
-	   * 	SPI has 1 dummy byte inserted before the payload (not sure what before the payload means but I assume it means that the data is
-	   * 	  second byte and not the first one
-	   *
-	   * 	*/
 
+	  /* START of uncommented code for while loop*/
 
-	  // What is the IMU addr for the chip id?
+	  uint8_t dummy = 0x00;
+//	  // First dummy read to set to SPI
+//	  Imu_Reg16_Read(0x00, &data);
+
+	  // Read the chip id
+	  Imu_Reg16_Read(IMU_REG_CHIP_ID, &dummy);
+
+	  uint8_t data = 0x00;
+	  uint8_t reg_check = 0x01;
+	  Imu_Reg16_Read(reg_check, &data);
+
 	  /*
-	   * The chip_id is on register 0x00
-	   * Only bits 0 to 7 contain valid information, the contents of bits 8 to 15 must be ignored
+	   * TODO
+	   * 	- Need a way to get specific bytes of the data that I am give, right now I
+	   * 	    can only extract one byte on the 3rd slot
+	   * 	- See why I I can't get a health check for power
+	   * 	- Get infromation relayed back to data from one of the axis of the IMU
+	   * 		- Literally anything for this tho like it can even be in the debugger its fine
+	   * 	- Start messing with the memory
 	   */
 
-	  // How do I read a register?
-	  /*
-	   * In order to read a reg i need to set the CS so the IMU knows that is must start transmitting
-	   * 	This means the CS pin for the IMU must be pulled LOW (pull it HIGH to stop communication)
-	   * 	I will be using the IMU_NCS to set it
-	   * I can use HAL_SPI_Recieve to read the data
-	   * 	Will need to make an array (prob uint8_t) that can store 2 bytes
-	   * 		With the 2 bytes, the 2nd one will have the data? (<== need to check this again)
-	   */
-	  //HAL_SPI_Receive(&hspi1, pData, Size, Timeout);
 
 
-	  // What is the specific value I am comparing it to?
-	  /*
-	   * The chip ID value (reset value) in addr 0x00 is 0x0043
-	   */
 
-	  // Set NCS pin to LOW to start transmission
-	  HAL_GPIO_WritePin(IMU_NCS_GPIO_Port, IMU_NCS_Pin, GPIO_PIN_RESET);
-
-	  // Dummy read for the first time and skip storing to configure to SPI
-	  if (!dummy_read)
-	  {
-		  HAL_SPI_Receive(&hspi1, rx_buf, 2, HAL_MAX_DELAY);
-		  dummy_read = true;
-	  }
-	  else
-	  {
-//		  uint8_t tx_buf[2] = {(0x00 | 0x80), 0x00};
-//		  HAL_SPI_TransmitReceive(&hspi1, tx_buf, rx_buf, 2, HAL_MAX_DELAY);
-		  HAL_SPI_Receive(&hspi1, rx_buf, 2, HAL_MAX_DELAY);
-	  }
-
-	  // Set NCS pin to HIGH to stop transmission
-	  HAL_GPIO_WritePin(IMU_NCS_GPIO_Port, IMU_NCS_Pin, GPIO_PIN_SET);
-
+	  /* END of uncommented code for while loop*/
 
 
 //	  HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
