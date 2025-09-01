@@ -52,7 +52,6 @@ bool imu_first_time = false;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
-
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -95,6 +94,8 @@ uint8_t Imu_Reg16_Read(uint8_t addr, uint8_t *low_byte, uint8_t *high_byte)
     /*
      * Create a transmit array that will set the transmit data to READ
      * Will have 4 bytes [(read set + addr), 0x00, 0x00, 0x00]
+     *
+     * Command byte: RnW = 1 (read) | Adress [6:0]
      */
     uint8_t tx_buf[4] = { ((addr & 0x7F) | 0x80), 0x00, 0x00, 0x00 };
     uint8_t rx_buf[4] = { 0 };
@@ -109,6 +110,31 @@ uint8_t Imu_Reg16_Read(uint8_t addr, uint8_t *low_byte, uint8_t *high_byte)
 
     *low_byte = rx_buf[2];
     *high_byte = rx_buf[3];
+    return status;
+}
+
+/* Imu_Reg16_Write
+ *
+ * Will take in an 8-bit addr and 2 8-bit write instruction and write it
+ *
+ * Takes: uint8_t addr and 2 uint8_t instructions
+ * Returns: uint8_t status
+ */
+uint8_t Imu_Reg16_Write(uint8_t addr, uint8_t low_instruction_byte,
+        uint8_t high_instruction_byte)
+{
+    // Store the addr, then the instruction with low byte first
+    // Command byte: RnW = 0 (write) | Adress [6:0]
+    uint8_t tx_buf[3] = { (addr & 0x7F), low_instruction_byte,
+            high_instruction_byte };
+
+    // Tranasmit data
+    Imu_Start_Transmission();
+    uint8_t status = (HAL_SPI_Transmit(&hspi1, tx_buf, sizeof(tx_buf),
+            HAL_MAX_DELAY) == HAL_OK);
+    Imu_Stop_Transmission();
+
+    //uint8_t status = ( HAL_SPI_Transmit(&hspi1, tx_buf, , Timeout))
     return status;
 }
 
@@ -144,8 +170,6 @@ void Imu_SetUp(void)
         HAL_GPIO_WritePin(LED_YELLOW_GPIO_Port, LED_YELLOW_Pin, GPIO_PIN_SET);
     }
 
-
-
     // Check if sensor status is ok
     /*
      * NOTE: Sometimes this needs a hard reset (removing power)
@@ -156,6 +180,23 @@ void Imu_SetUp(void)
     {
         HAL_GPIO_WritePin(LED_YELLOW_GPIO_Port, LED_YELLOW_Pin, GPIO_PIN_RESET);
     }
+
+    // Setup of Gyro
+    Imu_Reg16_Write(IMU_GYRO_CONFIG_ADDR, IMU_GYRO_CONFIG_LOW,
+            IMU_GYRO_CONFIG_HIGH);
+
+//    // Setup accel to low power
+//    Imu_Reg16_Write(IMU_ACCEL_CONFIG_ADDR, IMU_ACCEL_LOW_POWER_CONFIG_LOW, IMU_ACCEL_LOW_POWER_CONFIG_HIGH);
+//
+//    // Check sensor status
+//    Imu_Reg16_Read(IMU_STATUS_ADDR, &low_byte, &high_byte);
+//    while ((low_byte & 0x40) != 0x40) // Bitmask on low_byte to make sure only comparing 7th bit (MSB of the low byte)
+//    {
+//        HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
+//        Imu_Reg16_Read(IMU_STATUS_ADDR, &low_byte, &high_byte);
+//    }
+//    HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
+
     // Excelente! Successful init!
 
 } /* END of Imu_Setup */
@@ -202,6 +243,7 @@ int main(void)
 
 //  char txBuf[8];
 //  uint8_t count = 1;
+    char tx_buf[8];
     // Create rx array to store read information
     while (1)
     {
@@ -216,16 +258,18 @@ int main(void)
         uint8_t data_low_byte = 0x00;
         uint8_t data_high_byte = 0x00;
 
-        Imu_Reg16_Read(0x06, &data_low_byte, &data_high_byte);
-        /*
-         * TODO
-         * 	- Need a way to get specific bytes of the data that I am give, right now I
-         * 	    can only extract one byte on the 3rd slot
-         * 	- See why I I can't get a health check for power
-         * 	- Get infromation relayed back to data from one of the axis of the IMU
-         * 		- Literally anything for this tho like it can even be in the debugger its fine
-         * 	- Start messing with the memory
-         */
+        uint8_t read_low_byte = 0x00;
+        uint8_t read__high_byte = 0x00;
+
+        Imu_Reg16_Read(IMU_STATUS_ADDR, &read_low_byte, &read__high_byte);
+
+        if ((read_low_byte & 0x40) == 0x40)
+        {
+            Imu_Reg16_Read(0x03, &data_low_byte, &data_high_byte);
+            sprintf(tx_buf, "%u", data_high_byte);
+            sprintf(tx_buf, "%u\r\n", data_low_byte);
+            CDC_Transmit_FS((uint8_t*) tx_buf, strlen(tx_buf));
+        }
 
         /* END of uncommented code for while loop*/
 

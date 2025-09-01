@@ -54,6 +54,8 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 uint8_t Imu_Reg16_Read(uint8_t addr, uint8_t* low_byte, uint8_t* high_byte);
+uint8_t Imu_Reg16_Write(uint8_t addr, uint8_t low_instruction_byte, uint8_t high_instruction_byte);
+
 void Imu_Stop_Transmission(void);
 void Imu_Start_Transmission(void);
 void Imu_SetUp(void);
@@ -80,6 +82,16 @@ void Imu_SetUp(void);
 #define IMU_REG_CHIP_ID 0x43
 #define IMU_ERR_ADDR 0x01
 #define IMU_STATUS_ADDR 0x02
+
+#define IMU_ACCEL_CONFIG_ADDR 0x20
+#define IMU_ACCEL_LOW_POWER_CONFIG_LOW 0x31
+#define IMU_ACCEL_LOW_POWER_CONFIG_HIGH 0x27
+
+#define IMU_GYRO_CONFIG_ADDR 0x21
+#define IMU_GYRO_CONFIG_LOW 0x4B
+#define IMU_GYRO_CONFIG_HIGH 0x40
+
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
