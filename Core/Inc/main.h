@@ -53,9 +53,10 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-uint8_t Imu_Reg16_Read(uint8_t addr, uint8_t* data);
+uint8_t Imu_Reg16_Read(uint8_t addr, uint8_t* low_byte, uint8_t* high_byte);
 void Imu_Stop_Transmission(void);
 void Imu_Start_Transmission(void);
+void Imu_SetUp(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -75,7 +76,10 @@ void Imu_Start_Transmission(void);
 #define LED_GREEN_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-#define IMU_REG_CHIP_ID 0x00
+#define IMU_REG_CHIP_ADDR 0x00
+#define IMU_REG_CHIP_ID 0x43
+#define IMU_ERR_ADDR 0x01
+#define IMU_STATUS_ADDR 0x02
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
