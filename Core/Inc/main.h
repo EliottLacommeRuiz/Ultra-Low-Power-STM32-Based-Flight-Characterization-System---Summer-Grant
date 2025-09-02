@@ -59,6 +59,11 @@ uint8_t Imu_Reg16_Write(uint8_t addr, uint8_t low_instruction_byte, uint8_t high
 void Imu_Stop_Transmission(void);
 void Imu_Start_Transmission(void);
 void Imu_SetUp(void);
+
+uint8_t Flash_Read(uint8_t addr, uint8_t *low_byte, uint8_t *high_byte);
+void Flash_Write(void);
+void Flash_Start_Transmission(void);
+void Flash_Stop_Transmission(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

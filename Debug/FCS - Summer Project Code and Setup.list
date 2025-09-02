@@ -27,25 +27,25 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000028  00000000  00000000  0000a1cc  2**0
                   CONTENTS, READONLY
- 12 .debug_info   0000e834  00000000  00000000  0000a1f4  2**0
+ 12 .debug_info   0000e92f  00000000  00000000  0000a1f4  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 00002fae  00000000  00000000  00018a28  2**0
+ 13 .debug_abbrev 00002fff  00000000  00000000  00018b23  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 00000cf0  00000000  00000000  0001b9d8  2**3
+ 14 .debug_aranges 00000d10  00000000  00000000  0001bb28  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_rnglists 00000995  00000000  00000000  0001c6c8  2**0
+ 15 .debug_rnglists 000009af  00000000  00000000  0001c838  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  00016720  00000000  00000000  0001d05d  2**0
+ 16 .debug_macro  00016720  00000000  00000000  0001d1e7  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   000113e4  00000000  00000000  0003377d  2**0
+ 17 .debug_line   00011497  00000000  00000000  00033907  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    0007ce76  00000000  00000000  00044b61  2**0
+ 18 .debug_str    0007cef3  00000000  00000000  00044d9e  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  000c19d7  2**0
+ 19 .comment      00000043  00000000  00000000  000c1c91  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00003104  00000000  00000000  000c1a1c  2**2
+ 20 .debug_frame  00003180  00000000  00000000  000c1cd4  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 21 .debug_line_str 0000007f  00000000  00000000  000c4b20  2**0
+ 21 .debug_line_str 0000007f  00000000  00000000  000c4e54  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -654,6 +654,7 @@ int main(void)
  8000458:	1d3b      	adds	r3, r7, #4
  800045a:	2200      	movs	r2, #0
  800045c:	701a      	strb	r2, [r3, #0]
+//        Flash_Read(0x9F, &read_low_byte, &read__high_byte);
 
         Imu_Reg16_Read(IMU_STATUS_ADDR, &read_low_byte, &read__high_byte);
  800045e:	1d3a      	adds	r2, r7, #4

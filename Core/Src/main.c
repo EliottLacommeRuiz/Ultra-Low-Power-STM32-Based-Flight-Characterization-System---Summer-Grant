@@ -201,6 +201,123 @@ void Imu_SetUp(void)
 
 } /* END of Imu_Setup */
 
+
+/* Flash_Write
+ *
+ * Sets up the flash for write and will write any data into register
+ *
+ */
+void Flash_Write(void)
+{
+    // Enable write
+    Flash_Start_Transmission();
+    uint8_t write_addr = 0x06;
+    HAL_SPI_Transmit(&hspi1, &write_addr, 1, HAL_MAX_DELAY);
+    Flash_Stop_Transmission();
+
+    /* START of Erase status register 1 */
+    uint8_t erase_buf[4] = { 0x20, 0x00, 0x00, 0x00};
+    Flash_Start_Transmission();
+    HAL_SPI_Transmit(&hspi1, erase_buf, 4, HAL_MAX_DELAY);
+
+    // Need to check if the BUSY bit is active (LSB bit)
+    // Read the status register 1 (0x05)
+    uint8_t flash_low_byte = 0x00;
+    uint8_t flash__high_byte = 0x00;
+
+    /* START custom read for resiter 1*/
+    uint8_t tx_buf[6] = { 0x05, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t rx_buf[6] = { 0 };
+    Flash_Start_Transmission();
+    HAL_SPI_TransmitReceive(&hspi1, tx_buf, rx_buf, sizeof(tx_buf), HAL_MAX_DELAY);
+    Flash_Stop_Transmission();
+    /* END custom read for resiter 1*/
+
+    while( (flash_low_byte & 0x01) != 0x00)
+    {
+        Flash_Read(0x05, &flash_low_byte, &flash__high_byte);
+    }
+
+    /* END of erase for status register 1 */
+
+    /* START of write in status reg 1 */
+    // Now we can start to write to the register
+    // Enable write
+    Flash_Start_Transmission();
+    write_addr = 0x06;
+    HAL_SPI_Transmit(&hspi1, &write_addr, 1, HAL_MAX_DELAY);
+    Flash_Stop_Transmission();
+
+//    Flash_Start_Transmission();
+//    uint8_t write_addr_arr[] = 0x01;
+//    HAL_SPI_Transmit(&hspi1, &write_addr, 1, HAL_MAX_DELAY); // Instruction
+
+
+
+
+
+
+
+    // Disable write
+//    Flash_Start_Transmission();
+//    write_addr = 0x04;
+//    HAL_SPI_Transmit(&hspi1, &write_addr, 1, HAL_MAX_DELAY);
+//    Flash_Stop_Transmission();
+
+
+}
+
+/* Flash_Read
+ *
+ * Sets up the flash for read and will read any data from register
+ *
+ */
+uint8_t Flash_Read(uint8_t addr, uint8_t *low_byte, uint8_t *high_byte)
+{
+    /*
+     * Create a transmit array that will set the transmit data to READ
+     * Will have 6 bytes [ addr, 0x00, 0x00, 0x00, 0x00, 0x00]
+     *   This is because we need to wait 16 extra clock cycles for the 2 data bits to come in
+     *
+     */
+    uint8_t tx_buf[6] = { addr, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t rx_buf[6] = { 0 };
+
+    Flash_Start_Transmission();
+
+    // Send and get data while seeing if out status is ok
+    uint8_t status = (HAL_SPI_TransmitReceive(&hspi1, tx_buf, rx_buf, sizeof(tx_buf),
+    HAL_MAX_DELAY) == HAL_OK);
+
+    Flash_Stop_Transmission();
+
+    // In this case, [4] is manuf ID and [5] is flash ID
+    *low_byte = rx_buf[4];
+    *high_byte = rx_buf[5];
+    return status;
+} /* END of Flash_Read */
+
+/* Flash_Start_Transmission
+ *
+ * Starts the transmission of the flash chip by pulling the NCS to LOW
+ *
+ */
+void Flash_Start_Transmission()
+{
+    HAL_GPIO_WritePin(FLASH_CS_GPIO_Port, FLASH_CS_Pin, GPIO_PIN_RESET);
+} /* END of Flash_Start_Transmission*/
+
+/* Flash_Stop_Transmission
+ *
+ * Stops the transmission of the flash chip by pulling the NCS to HIGH
+ *
+ */
+void Flash_Stop_Transmission()
+{
+    HAL_GPIO_WritePin(FLASH_CS_GPIO_Port, FLASH_CS_Pin, GPIO_PIN_SET);
+} /* END of Flash_Stop_Transmission*/
+
+
 /* USER CODE END 0 */
 
 /**
@@ -260,6 +377,7 @@ int main(void)
 
         uint8_t read_low_byte = 0x00;
         uint8_t read__high_byte = 0x00;
+//        Flash_Read(0x9F, &read_low_byte, &read__high_byte);
 
         Imu_Reg16_Read(IMU_STATUS_ADDR, &read_low_byte, &read__high_byte);
 
